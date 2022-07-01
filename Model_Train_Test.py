@@ -79,7 +79,7 @@ model.evaluate(lasso_x_test, lasso_y_test)
 pred = (model.predict(lasso_x_test) > 0.5)
 
 pred_prob = model.predict(lasso_x_test)
-print("DNN evaluation resultsfor lassso: ", results(metrics.confusion_matrix(lasso_y_test, pred)))
+print("DNN evaluation results for lassso: ", results(metrics.confusion_matrix(lasso_y_test, pred)))
 
 #Support vector machine model for lasso
 
