@@ -1,4 +1,3 @@
-
 import pandas as pd
 import tensorflow as tf
 import numpy as np
@@ -16,6 +15,8 @@ from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.naive_bayes import GaussianNB
 import pickle
+
+
 def results(CM):
     TN = CM[0][0]
     FN = CM[1][0]
@@ -29,7 +30,7 @@ def results(CM):
     PPV = TP / (TP + FP)
     # Negative predictive value
     NPV = TN / (TN + FN)
-    return ('sensetivity: ', TPR, ' specifity: ', TNR, ' PPV: ', PPV, ' NPV: ', NPV)
+    return 'sensetivity: ', TPR, ' specifity: ', TNR, ' PPV: ', PPV, ' NPV: ', NPV
 
 
 data = pd.read_excel('Downloads/Final_covid_ML_Data.xlsx')
@@ -42,7 +43,7 @@ lasso_features = ['age', 'cough', 'muscle pain', 'LOC', 'rhinorrhea', 'anosmia',
 lasso_x = data[lasso_features]
 lasso_y = data['deaths']
 
-lasso_x_train, lasso_x_test, lasso_y_train, lasso_y_test = train_test_split(lasso_x, lasso_y, test_size=0.2,
+lasso_x_train, lasso_x_test, lasso_y_train, lasso_y_test = train_test_split(lasso_x, lasso_y, test_size=0.3,
                                                                             random_state=123)
 test_lasso = lasso_x_test.copy()
 test_lasso['death'] = lasso_y_test
@@ -59,7 +60,7 @@ model_checkpoint_callback_LASSO = tf.keras.callbacks.ModelCheckpoint(
     monitor='val_accuracy',
     mode='max',
     save_best_only=True)
-#neural network model for lasso
+# neural network model for lasso
 model = tf.keras.Sequential([
     tf.keras.layers.Dense(37, activation='relu', input_dim=37),
     tf.keras.layers.Dropout(0.6),
@@ -72,7 +73,8 @@ model = tf.keras.Sequential([
 sgd = tf.keras.optimizers.SGD(learning_rate=0.01, decay=1e-7, momentum=0.9, nesterov=True)
 model.compile(loss='binary_crossentropy', optimizer="adam", metrics=['accuracy'])
 
-history = model.fit(lasso_x_train, lasso_y_train, validation_data=(lasso_x_test, lasso_y_test), epochs=100,callbacks=[model_checkpoint_callback_LASSO])
+history = model.fit(lasso_x_train, lasso_y_train, validation_data=(lasso_x_test, lasso_y_test), epochs=100,
+                    callbacks=[model_checkpoint_callback_LASSO])
 
 model.evaluate(lasso_x_test, lasso_y_test)
 
@@ -81,7 +83,7 @@ pred = (model.predict(lasso_x_test) > 0.5)
 pred_prob = model.predict(lasso_x_test)
 print("DNN evaluation results for lassso: ", results(metrics.confusion_matrix(lasso_y_test, pred)))
 
-#Support vector machine model for lasso
+# Support vector machine model for lasso
 
 lasso_svm = SVC(decision_function_shape='ovo')
 lasso_svm.probability = True
@@ -89,56 +91,54 @@ lasso_svm.fit(lasso_x_train, lasso_y_train)
 pred_prob_lasso_svm = lasso_svm.predict_proba(lasso_x_test)
 pred_lasso_svm = lasso_svm.predict(lasso_x_test)
 np.set_printoptions()
-print("SVM evaluation results for lasso: ",results(metrics.confusion_matrix(lasso_y_test, pred_lasso_svm)))
+print("SVM evaluation results for lasso: ", results(metrics.confusion_matrix(lasso_y_test, pred_lasso_svm)))
 pred_prob_lasso_svm = 1 - pred_prob_lasso_svm.reshape(1446, 1)[::2]
 pickle.dump(lasso_svm, open('Downloads/lasso_svm.sav', 'wb'))
 
-#random forest model for lasso
+# random forest model for lasso
 lasso_rf = RandomForestClassifier(oob_score=True, criterion='gini', max_depth=13)
 lasso_rf.fit(lasso_x_train, lasso_y_train)
 lasso_rf_pred_prob = lasso_rf.predict_proba(lasso_x_test)
 lasso_rf_pred = lasso_rf.predict(lasso_x_test)
-lasso_rf_pred_prob = 1 - lasso_rf_pred_prob.reshape(1446, 1)[::2]
-print("RF evaluation results for lasso:",results(metrics.confusion_matrix(lasso_y_test, lasso_rf_pred)))
+lasso_rf_pred_prob = 1 - lasso_rf_pred_prob.reshape(2169, 1)[::2]
+print("RF evaluation results for lasso:", results(metrics.confusion_matrix(lasso_y_test, lasso_rf_pred)))
 lasso_rf_pred = lasso_rf_pred_prob > 0.5
 pickle.dump(lasso_rf, open('Downloads/lasso_rf.sav', 'wb'))
 
-#GBC model for lasso
+# GBC model for lasso
 lasso_gbc = GradientBoostingClassifier(loss='deviance', n_estimators=400, learning_rate=0.01, criterion='mse',
                                        max_depth=6)
 lasso_gbc.fit(lasso_x_train, lasso_y_train)
 lasso_gbc_pred_prob = lasso_gbc.predict_proba(lasso_x_test)
 lasso_gbc_pred = lasso_gbc.predict(lasso_x_test)
-lasso_gbc_pred_prob = 1 - lasso_gbc_pred_prob.reshape(1446, 1)[::2]
-print("GBC evaluation results for lasso: ",results(metrics.confusion_matrix(lasso_y_test, lasso_gbc_pred)))
+lasso_gbc_pred_prob = 1 - lasso_gbc_pred_prob.reshape(2169, 1)[::2]
+print("GBC evaluation results for lasso: ", results(metrics.confusion_matrix(lasso_y_test, lasso_gbc_pred)))
 pickle.dump(lasso_gbc, open('Downloads/lasso_gbc.sav', 'wb'))
 
-#Nearest neighbor for lasso
+# Nearest neighbor for lasso
 lasso_knn = KNeighborsClassifier(n_neighbors=3, leaf_size=30, weights='distance')
 lasso_knn.fit(lasso_x_train, lasso_y_train)
 lasso_knn_pred_prob = lasso_knn.predict_proba(lasso_x_test)
 lasso_knn_pred = lasso_knn.predict(lasso_x_test)
-lasso_knn_pred_prob = 1 - lasso_knn_pred_prob.reshape(1446, 1)[::2]
-print("KNN evaluation results for lasso: ",results(metrics.confusion_matrix(lasso_y_test, lasso_knn_pred)))
+lasso_knn_pred_prob = 1 - lasso_knn_pred_prob.reshape(2169, 1)[::2]
+print("KNN evaluation results for lasso: ", results(metrics.confusion_matrix(lasso_y_test, lasso_knn_pred)))
 pickle.dump(lasso_knn, open('Downloads/lasso_knn.sav', 'wb'))
 
-#Logistic regression model for lasso
+# Logistic regression model for lasso
 lasso_lr = LogisticRegression(penalty='l2', tol=1e-5)
 lasso_lr.fit(lasso_x_train, lasso_y_train)
 lasso_lr_pred_prob = lasso_lr.predict_proba(lasso_x_test)
 lasso_lr_pred = lasso_lr.predict(lasso_x_test)
-print("LR evaluation results for lasso: ",results(metrics.confusion_matrix(lasso_y_test, lasso_lr_pred)))
-lasso_lr_pred_prob = 1 - lasso_lr_pred_prob.reshape(1446, 1)[::2]
+print("LR evaluation results for lasso: ", results(metrics.confusion_matrix(lasso_y_test, lasso_lr_pred)))
+lasso_lr_pred_prob = 1 - lasso_lr_pred_prob.reshape(2169, 1)[::2]
 pickle.dump(lasso_lr, open('Downloads/lasso_lr.sav', 'wb'))
-
 
 lasso_nb = GaussianNB()
 lasso_nb.fit(lasso_x_train, lasso_y_train)
 lasso_nb_pred_prob = lasso_nb.predict_proba(lasso_x_test)
 lasso_nb_pred = lasso_nb.predict(lasso_x_test)
 print(results(metrics.confusion_matrix(lasso_y_test, lasso_nb_pred)))
-lasso_nb_pred_prob = 1 - lasso_nb_pred_prob.reshape(1446, 1)[::2]
-
+lasso_nb_pred_prob = 1 - lasso_nb_pred_prob.reshape(2169, 1)[::2]
 
 fpr1, tpr1, thresh1 = roc_curve(lasso_y_test, pred_prob, pos_label=1)
 fpr2, tpr2, thresh2 = roc_curve(lasso_y_test, pred_prob_lasso_svm, pos_label=1)
@@ -154,13 +154,13 @@ auc_score4 = roc_auc_score(lasso_y_test, lasso_gbc_pred_prob)
 auc_score5 = roc_auc_score(lasso_y_test, lasso_knn_pred_prob)
 auc_score6 = roc_auc_score(lasso_y_test, lasso_lr_pred_prob)
 auc_score7 = roc_auc_score(lasso_y_test, lasso_nb_pred_prob)
-print("LASSO DNN AUC: ",auc_score1)
-print("LASSO SVM AUC: ",auc_score2)
-print("LASSO RF AUC: ",auc_score3)
-print("LASSO GBC AUC: ",auc_score4)
-print("LASSO KNN AUC: ",auc_score5)
-print("LASSO LR AUC: ",auc_score6)
-#print("",auc_score7)
+print("LASSO DNN AUC: ", auc_score1)
+print("LASSO SVM AUC: ", auc_score2)
+print("LASSO RF AUC: ", auc_score3)
+print("LASSO GBC AUC: ", auc_score4)
+print("LASSO KNN AUC: ", auc_score5)
+print("LASSO LR AUC: ", auc_score6)
+# print("",auc_score7)
 random_probs = [0 for i in range(len(lasso_y_test))]
 p_fpr, p_tpr, _ = roc_curve(lasso_y_test, random_probs, pos_label=1)
 plt.plot(fpr1, tpr1, linestyle='--', color='orange', label='lasso_DNN')
@@ -191,16 +191,13 @@ test_lasso['knn'] = lasso_knn_pred_prob
 test_lasso['lr'] = lasso_lr_pred_prob
 test_lasso['gbc'] = lasso_gbc_pred_prob
 
-
 # boruta
 boruta_features = ['o2sat', 'age', 'NEUT', 'CR', 'troponin', 'LOC', 'LYMPHH', 'ph', 'hco3', 'WBC', 'na', 'alzheimer',
                    'PLT', 'AST', 'HB', 'pco2', 'inr', 'ca', 'rr', 'pt', 'k', 'sbp', 'dbp', 'cpk', 'pr', 'ALT']
 
-
 boruta_x = data[boruta_features]
 boruta_y = data['deaths']
-boruta_x_train, boruta_x_test, boruta_y_train, boruta_y_test = train_test_split(boruta_x, boruta_y, test_size=0.2)
-
+boruta_x_train, boruta_x_test, boruta_y_train, boruta_y_test = train_test_split(boruta_x, boruta_y, test_size=0.3)
 
 boruta_test = boruta_x_test.copy()
 boruta_test['death'] = boruta_y_test
@@ -215,7 +212,7 @@ model_checkpoint_callback_Boruta = tf.keras.callbacks.ModelCheckpoint(
     monitor='val_accuracy',
     mode='max',
     save_best_only=True)
-#DNN model for boruta
+# DNN model for boruta
 boruta_model = tf.keras.Sequential([
     tf.keras.layers.Dense(26, activation='relu', input_dim=26),
     tf.keras.layers.Dropout(0.6),
@@ -228,59 +225,59 @@ boruta_model = tf.keras.Sequential([
 sgd = tf.keras.optimizers.SGD(lr=0.02, decay=1e-6, momentum=0.8, nesterov=True)
 boruta_model.compile(loss='binary_crossentropy', optimizer=sgd, metrics=['accuracy'])
 boruta_history = boruta_model.fit(boruta_x_train, boruta_y_train, validation_data=(boruta_x_test, boruta_y_test),
-                                  epochs=100,callbacks=[model_checkpoint_callback_Boruta])
+                                  epochs=100, callbacks=[model_checkpoint_callback_Boruta])
 
 boruta_pred_prob = boruta_model.predict(boruta_x_test)
 boruta_pred = boruta_model.predict(boruta_x_test)
 boruta_pred = (boruta_pred >= 0.45)
-print("DNN evaluation results for boruta: ",results(metrics.confusion_matrix(boruta_y_test, boruta_pred)))
+print("DNN evaluation results for boruta: ", results(metrics.confusion_matrix(boruta_y_test, boruta_pred)))
 
-#Support vector machine model for boruta
+# Support vector machine model for boruta
 boruta_svm = SVC(decision_function_shape='ovo')
 boruta_svm.probability = True
 boruta_svm.fit(boruta_x_train, boruta_y_train)
 pred_prob_boruta_svm = boruta_svm.predict_proba(boruta_x_test)
 pred_boruta_svm = boruta_svm.predict(boruta_x_test)
 np.set_printoptions()
-print("SVM evaluation results for boruta: ",results(metrics.confusion_matrix(boruta_y_test, pred_boruta_svm)))
-pred_prob_boruta_svm = 1 - pred_prob_boruta_svm.reshape(1446, 1)[::2]
+print("SVM evaluation results for boruta: ", results(metrics.confusion_matrix(boruta_y_test, pred_boruta_svm)))
+pred_prob_boruta_svm = 1 - pred_prob_boruta_svm.reshape(2169, 1)[::2]
 pickle.dump(boruta_svm, open('Downloads/boruta_svm.sav', 'wb'))
 
-#rf model for boruta
+# rf model for boruta
 boruta_rf = RandomForestClassifier(oob_score=True, criterion='gini', max_depth=13)
 boruta_rf.fit(boruta_x_train, boruta_y_train)
 boruta_rf_pred_prob = boruta_rf.predict_proba(boruta_x_test)
 boruta_rf_pred = boruta_rf.predict(boruta_x_test)
-boruta_rf_pred_prob = 1 - boruta_rf_pred_prob.reshape(1446, 1)[::2]
-print("RF evaluation results for boruta: ",results(metrics.confusion_matrix(boruta_y_test, boruta_rf_pred)))
+boruta_rf_pred_prob = 1 - boruta_rf_pred_prob.reshape(2169, 1)[::2]
+print("RF evaluation results for boruta: ", results(metrics.confusion_matrix(boruta_y_test, boruta_rf_pred)))
 pickle.dump(boruta_svm, open('Downloads/boruta_rf.sav', 'wb'))
 
-#GBC model for boruta
+# GBC model for boruta
 boruta_gbc = GradientBoostingClassifier(loss='deviance', n_estimators=400, learning_rate=0.01, criterion='mse',
                                         max_depth=6)
 boruta_gbc.fit(boruta_x_train, boruta_y_train)
 boruta_gbc_pred_prob = boruta_gbc.predict_proba(boruta_x_test)
 boruta_gbc_pred = boruta_gbc.predict(boruta_x_test)
-boruta_gbc_pred_prob = 1 - boruta_gbc_pred_prob.reshape(1446, 1)[::2]
+boruta_gbc_pred_prob = 1 - boruta_gbc_pred_prob.reshape(2169, 1)[::2]
 print("GBC evaluation results for boruta: ", results(metrics.confusion_matrix(boruta_y_test, boruta_gbc_pred)))
 pickle.dump(boruta_gbc, open('Downloads/boruta_gbc.sav', 'wb'))
 
-#KNN model for boruta
+# KNN model for boruta
 boruta_knn = KNeighborsClassifier(n_neighbors=3)
 boruta_knn.fit(boruta_x_train, boruta_y_train)
 boruta_knn_pred_prob = boruta_knn.predict_proba(boruta_x_test)
 boruta_knn_pred = boruta_knn.predict(boruta_x_test)
-boruta_knn_pred_prob = 1 - boruta_knn_pred_prob.reshape(1446, 1)[::2]
-print("KNN evaluation results for boruta",results(metrics.confusion_matrix(boruta_y_test, boruta_knn_pred)))
+boruta_knn_pred_prob = 1 - boruta_knn_pred_prob.reshape(2169, 1)[::2]
+print("KNN evaluation results for boruta", results(metrics.confusion_matrix(boruta_y_test, boruta_knn_pred)))
 pickle.dump(boruta_knn, open('Downloads/boruta_knn.sav', 'wb'))
 
-#LR model for boruta
+# LR model for boruta
 boruta_lr = LogisticRegression(penalty='l2', tol=1e-6)
 boruta_lr.fit(boruta_x_train, boruta_y_train)
 boruta_lr_pred_prob = boruta_lr.predict_proba(boruta_x_test)
 boruta_lr_pred = boruta_lr.predict(boruta_x_test)
-print("LR evaluation results for boruta: ",results(metrics.confusion_matrix(boruta_y_test, boruta_lr_pred)))
-boruta_lr_pred_prob = 1 - boruta_lr_pred_prob.reshape(1446, 1)[::2]
+print("LR evaluation results for boruta: ", results(metrics.confusion_matrix(boruta_y_test, boruta_lr_pred)))
+boruta_lr_pred_prob = 1 - boruta_lr_pred_prob.reshape(2169, 1)[::2]
 pickle.dump(boruta_lr, open('Downloads/boruta_lr.sav', 'wb'))
 
 boruta_nb = GaussianNB()
@@ -288,8 +285,7 @@ boruta_nb.fit(boruta_x_train, boruta_y_train)
 boruta_nb_pred_prob = boruta_nb.predict_proba(boruta_x_test)
 boruta_nb_pred = boruta_nb.predict(boruta_x_test)
 print(results(metrics.confusion_matrix(boruta_y_test, boruta_nb_pred)))
-boruta_nb_pred_prob = 1 - boruta_nb_pred_prob.reshape(1446, 1)[::2]
-
+boruta_nb_pred_prob = 1 - boruta_nb_pred_prob.reshape(2169, 1)[::2]
 
 fpr8, tpr8, thresh8 = roc_curve(boruta_y_test, boruta_pred_prob, pos_label=1)
 fpr9, tpr9, thresh9 = roc_curve(boruta_y_test, pred_prob_boruta_svm, pos_label=1)
@@ -305,12 +301,12 @@ auc_score11 = roc_auc_score(boruta_y_test, boruta_gbc_pred_prob)
 auc_score12 = roc_auc_score(boruta_y_test, boruta_knn_pred_prob)
 auc_score13 = roc_auc_score(boruta_y_test, boruta_lr_pred_prob)
 auc_score14 = roc_auc_score(boruta_y_test, boruta_nb_pred_prob)
-print("Boruta DNN AUC: ",auc_score8)
-print("Boruta SVM AUC: ",auc_score9)
-print("Boruta RF AUC: ",auc_score10)
-print("Boruta GBC AUC: ",auc_score11)
-print("Boruta KNN AUC: ",auc_score12)
-print("Boruta LR AUC: ",auc_score13)
+print("Boruta DNN AUC: ", auc_score8)
+print("Boruta SVM AUC: ", auc_score9)
+print("Boruta RF AUC: ", auc_score10)
+print("Boruta GBC AUC: ", auc_score11)
+print("Boruta KNN AUC: ", auc_score12)
+print("Boruta LR AUC: ", auc_score13)
 random_probs = [0 for i in range(len(lasso_y_test))]
 p_fpr, p_tpr, _ = roc_curve(lasso_y_test, random_probs, pos_label=1)
 plt.plot(fpr8, tpr8, linestyle='--', color='orange', label='boruta_DNN')
@@ -339,4 +335,3 @@ boruta_test['rf'] = boruta_rf_pred_prob
 boruta_test['gbc'] = boruta_gbc_pred_prob
 boruta_test['knn'] = boruta_knn_pred_prob
 boruta_test['lr'] = boruta_lr_pred_prob
-
