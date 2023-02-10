@@ -11,4 +11,4 @@ The main and external validation dataset are available upon reasonable request.
 
 ## The article related to this repository has been accepted for publication in Nature Scientific Reports.
 
-## You can find the preprint version of the article related to this repository in [researchsquare](https://assets.researchsquare.com/files/rs-2152771/v1/5c5584d7-a784-4fe8-81b9-60b77d29e726.pdf?c=1666708980)
+## You can find the published version of the article related to this repository in [Nature, Scientific Reports](https://www.nature.com/articles/s41598-023-28943-z)
